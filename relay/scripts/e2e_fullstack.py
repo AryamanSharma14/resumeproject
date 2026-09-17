@@ -74,7 +74,8 @@ def main() -> int:
                 print("step1 worker registered:", workers[0]["id"])
 
                 r = c.post("/api/v1/jobs", headers={"Idempotency-Key": "fs-1"},
-                           json={"handler": "text_summary", "payload": {"text": "full stack relay"}})
+                           json={"handler": "text_summary",
+                                 "payload": {"text": "full stack relay"}})
                 assert r.status_code == 201, r.text
                 done = await_state(c, r.json()["job_id"], {"succeeded"}, 30)
                 expected = {"characters": 16, "words": 3, "lines": 1}
@@ -118,7 +119,7 @@ def main() -> int:
                 assert ui.status_code == 200 and "text/html" in ui.headers["content-type"]
                 assert c.get(f"/assets/{asset}").status_code == 200
                 assert deep.status_code == 200 and c.get("/no-such-file.js").status_code == 404
-                print("step7 dashboard served: / + hashed asset + deep link + 404 for missing asset")
+                print("step7 dashboard served: / + asset + deep link + 404")
             print("FULLSTACK_E2E_PASS")
             return 0
         finally:
