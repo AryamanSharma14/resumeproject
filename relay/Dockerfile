@@ -6,7 +6,7 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM python:3.13.5-slim-bookworm AS builder
+FROM python:3.14.7-slim-bookworm AS builder
 ENV UV_LINK_MODE=copy UV_COMPILE_BYTECODE=0
 RUN python -m pip install --no-cache-dir uv==0.11.7
 WORKDIR /build
@@ -20,7 +20,7 @@ RUN python scripts/build_release.py --output /artifacts
 RUN uv sync --locked --no-dev --no-install-project --no-editable \
     && uv pip install --python /build/.venv/bin/python --no-deps /artifacts/*.whl
 
-FROM python:3.13.5-slim-bookworm AS runtime
+FROM python:3.14.7-slim-bookworm AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     RELAY_DATA_DIR=/var/lib/relay
 RUN groupadd --gid 10001 relay \
