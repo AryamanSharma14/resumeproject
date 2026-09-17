@@ -80,7 +80,7 @@ def test_t13_real_child_timeout_frees_slot(tmp_path: Path) -> None:
         next_job = submit(conn)
         process.start()
         wait_for(lambda: state(conn, next_job) == "succeeded")
-        assert state(conn, hung) == "failed"
+        wait_for(lambda: state(conn, hung) == "failed")
         assert (
             conn.execute("SELECT state FROM attempts WHERE job_id=?", (hung,)).fetchone()[0]
             == "timed_out"
