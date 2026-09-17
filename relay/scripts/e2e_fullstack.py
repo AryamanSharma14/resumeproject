@@ -55,15 +55,25 @@ def main() -> int:
         port = server.servers[0].sockets[0].getsockname()[1]
         base = f"http://127.0.0.1:{port}"
         worker = subprocess.Popen(
-            [str(ROOT / ".venv" / "Scripts" / "relay.exe"), "worker", "start",
-             "--db", db, "--queues", "default", "--concurrency", "1"],
+            [
+                str(ROOT / ".venv" / "Scripts" / "relay.exe"),
+                "worker",
+                "start",
+                "--db",
+                db,
+                "--queues",
+                "default",
+                "--concurrency",
+                "1",
+            ],
             env={**os.environ, "RELAY_TOKEN": TOKEN},
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
         try:
-            with httpx.Client(base_url=base, timeout=10,
-                              headers={"Authorization": f"Bearer {TOKEN}"}) as c:
+            with httpx.Client(
+                base_url=base, timeout=10, headers={"Authorization": f"Bearer {TOKEN}"}
+            ) as c:
                 assert c.get("/health/ready").status_code == 200, "API not ready"
                 workers = c.get("/api/v1/workers").json()["items"]
                 deadline = time.monotonic() + 20
@@ -73,33 +83,50 @@ def main() -> int:
                 assert workers, "worker never registered"
                 print("step1 worker registered:", workers[0]["id"])
 
-                r = c.post("/api/v1/jobs", headers={"Idempotency-Key": "fs-1"},
-                           json={"handler": "text_summary",
-                                 "payload": {"text": "full stack relay"}})
+                r = c.post(
+                    "/api/v1/jobs",
+                    headers={"Idempotency-Key": "fs-1"},
+                    json={"handler": "text_summary", "payload": {"text": "full stack relay"}},
+                )
                 assert r.status_code == 201, r.text
                 done = await_state(c, r.json()["job_id"], {"succeeded"}, 30)
                 expected = {"characters": 16, "words": 3, "lines": 1}
                 assert done["result"] == expected, done["result"]
                 print("step2 submit->worker->succeeded:", done["result"])
 
-                r = c.post("/api/v1/jobs", json={"handler": "demo_flaky",
-                            "payload": {"fail_times": 1}, "max_attempts": 3})
+                r = c.post(
+                    "/api/v1/jobs",
+                    json={"handler": "demo_flaky", "payload": {"fail_times": 1}, "max_attempts": 3},
+                )
                 flaky = r.json()["job_id"]
                 done = await_state(c, flaky, {"succeeded", "failed"}, 60)
                 attempts = c.get(f"/api/v1/jobs/{flaky}/attempts").json()["items"]
                 assert done["state"] == "succeeded" and len(attempts) == 2, (done, attempts)
                 print("step3 retry path: succeeded after", len(attempts), "attempts")
 
-                r = c.post("/api/v1/jobs", json={"handler": "demo_delay",
-                            "payload": {"duration_ms": 4000}, "timeout_ms": 800, "max_attempts": 1})
+                r = c.post(
+                    "/api/v1/jobs",
+                    json={
+                        "handler": "demo_delay",
+                        "payload": {"duration_ms": 4000},
+                        "timeout_ms": 800,
+                        "max_attempts": 1,
+                    },
+                )
                 slow = r.json()["job_id"]
                 done = await_state(c, slow, {"failed"}, 60)
                 attempts = c.get(f"/api/v1/jobs/{slow}/attempts").json()["items"]
                 assert attempts[0]["state"] == "timed_out", attempts[0]
                 print("step4 watchdog timeout: failed with timed_out attempt")
 
-                r = c.post("/api/v1/jobs", json={"handler": "demo_delay",
-                            "payload": {"duration_ms": 0}, "delay_ms": 60_000})
+                r = c.post(
+                    "/api/v1/jobs",
+                    json={
+                        "handler": "demo_delay",
+                        "payload": {"duration_ms": 0},
+                        "delay_ms": 60_000,
+                    },
+                )
                 cancel_id = r.json()["job_id"]
                 assert c.post(f"/api/v1/jobs/{cancel_id}/cancel").status_code == 200
                 assert c.get(f"/api/v1/jobs/{cancel_id}").json()["state"] == "canceled"
