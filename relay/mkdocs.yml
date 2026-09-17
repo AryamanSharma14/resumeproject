@@ -1,0 +1,29 @@
+site_name: Relay
+site_description: Local-first durable background jobs — unreleased operator guide
+strict: true
+docs_dir: docs/user
+site_dir: site
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: teal
+    accent: teal
+  features:
+    - navigation.sections
+    - content.code.copy
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - fenced_code
+  - tables
+nav:
+  - Overview: index.md
+  - Getting started: getting-started.md
+  - Concepts and failure model: concepts.md
+  - CLI and API: reference.md
+  - Security: security.md
+  - Operations: operations.md
+  - Docker (unverified): docker.md
+  - Build and release gates: release.md

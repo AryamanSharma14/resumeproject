@@ -1,0 +1,27 @@
+name: Feature request
+description: Explain a user need within Relay's local-first scope.
+title: "feature: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Relay is a single-host, trusted-code tool. Hosted/multi-tenant execution and
+        arbitrary-code sandboxing are not promised. Acceptance does not promise delivery.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and current workaround
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Include failure modes, security boundaries and alternatives.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and contract impact
+      description: Schema, compatibility or trust-boundary changes require an ADR.

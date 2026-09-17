@@ -1,0 +1,48 @@
+# Linux Docker Engine only: CLI intentionally binds 127.0.0.1, never 0.0.0.0.
+# Host networking preserves that bind; do NOT add wildcard published ports.
+x-relay: &relay
+  image: relay-jobs:local
+  build:
+    context: .
+  user: "10001:10001"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=64m
+  volumes:
+    - relay-data:/var/lib/relay
+  environment:
+    RELAY_DATA_DIR: /var/lib/relay
+  init: true
+  stop_grace_period: 45s
+
+services:
+  init:
+    <<: *relay
+    command: [init]
+    network_mode: none
+    restart: "no"
+    healthcheck:
+      disable: true
+  api:
+    <<: *relay
+    command: [serve, --port, "8000"]
+    network_mode: host
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+  worker:
+    <<: *relay
+    command: [worker, start, --concurrency, "2", --grace-seconds, "30"]
+    network_mode: none
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    # HTTP liveness belongs to the API, not the DB-connected worker process.
+    healthcheck:
+      disable: true
+volumes:
+  relay-data:

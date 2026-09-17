@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a reproducible defect without credentials or private payloads.
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report vulnerabilities here. Read relay/SECURITY.md for private disclosure.
+        Remove tokens, database files, personal payloads and host-specific paths.
+  - type: input
+    id: version
+    attributes:
+      label: Version or source commit
+      description: Include OS, Python version and install method.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Commands and non-sensitive sample input; no bearer credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized output
+      render: text
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed credentials and private job data; this is not a vulnerability report.
+          required: true
