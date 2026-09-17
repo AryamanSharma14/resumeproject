@@ -16,3 +16,4 @@ build/
 
 # Local scratch
 *.log
+site/
