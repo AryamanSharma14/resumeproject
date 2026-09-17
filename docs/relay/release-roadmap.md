@@ -6,7 +6,7 @@ Date: 2026-09-17. Status: planning document. Extends implementation-plan.md (sam
 This roadmap takes Relay from an empty directory to a v1.0 that a stranger can install, run and audit, and that can be published as open source with a credible path to monetization. It is written as a one-shot execution contract: an implementer (human or coding agent) should be able to complete each phase without user intervention except at the checkpoints listed in section 10.
 
 ## 2. Ground rules for the whole roadmap
-- The application is implemented in `C:/Users/aryam/Desktop/yee/coding/resumeproject/relay/` per AGENTS.md. Planning docs stay in `docs/relay/`.
+- The application is implemented in `resumeproject/relay/` (workspace root per AGENTS.md). Planning docs stay in `docs/relay/`.
 - Engineering work follows `docs/relay/implementation-plan.md` sections 4-13 (layout, libraries, schema, worker, API/CLI, UX, security, tests, benchmarks, milestones). This roadmap adds the product, release and community layers.
 - Scope discipline: no feature from the implementation plan's defer list enters v1. Scope changes require an ADR.
 - Security requirements live in `docs/relay/security.md`; every phase gate includes the security acceptance criteria relevant to that phase. Operating procedures live in `docs/relay/operations-runbook.md`.

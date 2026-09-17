@@ -1,6 +1,6 @@
 # Resume Projects
 
-Project workspace: `C:\Users\aryam\Desktop\yee\coding\resumeproject`
+Project workspace: this repository (local path intentionally not embedded; see AGENTS.md).
 
 Store future project documents, research and implementation here, not in Downloads.
 
@@ -35,5 +35,5 @@ Reading order for an implementer: [release roadmap](docs/relay/release-roadmap.m
 
 All documents above are plans/specifications. No Relay application code exists yet. Implementation starts at Phase A (repo scaffold) in `relay/` when authorized, per [AGENTS.md](AGENTS.md) and the roadmap's checkpoint list.
 
-The original resume PDF has not been moved or modified.
+Personal documents (e.g., a résumé PDF) are not stored in this repository.
 

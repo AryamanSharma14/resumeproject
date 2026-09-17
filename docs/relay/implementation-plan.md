@@ -2,7 +2,7 @@
 
 Date: 2026-09-17
 Status: researched design proposal, not an implemented or benchmarked application.
-Owner: Aryaman Sharma. Resume basis: C:\Users\aryam\Downloads\Resume july 2026.pdf.
+Owner: project maintainer (see git history). Personal file paths and career context are kept out of the repository on purpose.
 This document supersedes earlier informal Relay suggestions where they conflict.
 
 ## 1. Executive decision
@@ -96,7 +96,7 @@ One API process initially, with an explicitly supervised maintenance loop. Worke
 Use sync FastAPI endpoints for sync SQLite operations, keeping blocking DB calls out of async event-loop code. Async lifespan maintenance delegates blocking transactions to a thread, with bounded cadence, shutdown signaling and visible error reporting. Never share a sqlite3 connection concurrently across threads. Keep the domain/state machine independent of FastAPI and Typer.
 
 ### 4.1 Proposed repository layout
-Proposed root: C:\Users\aryam\Desktop\yee\coding\relay . Do not create or overwrite it until implementation begins and existing contents are inspected.
+Proposed root: `resumeproject/relay/` (relative to the workspace root). Do not create or overwrite it until implementation begins and existing contents are inspected.
 
 Relative layout below is a specification, not files created by this task:
 - pyproject.toml, uv.lock, README.md, LICENSE, SECURITY.md
@@ -151,7 +151,7 @@ Coding rules: typed public boundaries; small explicit services; parameterized SQ
 ## 6. Database schema and transaction design
 
 ### 6.1 Connection and durability
-Use platform-local app data; Windows default: C:\Users\aryam\AppData\Local\Relay . Never default to OneDrive, a network share or synced storage. WAL is single-host, not distributed shared storage. Use sqlite3 explicit transaction control (isolation_level=None), foreign_keys=ON, verified WAL mode, synchronous=FULL initially, and bounded busy_timeout. Document performance/durability tradeoffs. Short writes start BEGIN IMMEDIATE; every path commits or rolls back. No handler, network call or streamed response holds a transaction open. No connection is concurrently shared across threads.
+Use platform-local app data; Windows default: %LOCALAPPDATA%/Relay . Never default to OneDrive, a network share or synced storage. WAL is single-host, not distributed shared storage. Use sqlite3 explicit transaction control (isolation_level=None), foreign_keys=ON, verified WAL mode, synchronous=FULL initially, and bounded busy_timeout. Document performance/durability tradeoffs. Short writes start BEGIN IMMEDIATE; every path commits or rolls back. No handler, network call or streamed response holds a transaction open. No connection is concurrently shared across threads.
 
 Retry whole transactions only for retryable lock contention, with bounded jitter and a total deadline. SQLITE_BUSY can still occur; return explicit temporary failure on exhaustion. Disk-full, read-only and corruption errors are not ordinary contention. Do not promise zero database lock errors.
 

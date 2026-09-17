@@ -16,3 +16,7 @@ dist/
 .env.*
 *.token
 
+
+# Personal career notes (never pushed)
+/local/
+
