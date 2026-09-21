@@ -1,111 +1,207 @@
-# Resume Projects: Relay (`relay-jobs`)
+# ⚡ Relay (`relay-jobs`)
 
-This repository contains **Relay** (`relay-jobs`), an inspectable, local-first background job processing system built with Python (FastAPI, Typer, SQLite WAL) and a bundled React/TypeScript operations dashboard.
+<p align="left">
+  <strong>The inspectable, local-first background job engine for Python.</strong><br>
+  Durable task execution, atomic lease fencing, and attempt immutability on SQLite WAL — zero external brokers required.
+</p>
 
-Relay is engineered around **verifiable failure guarantees**: atomic state transitions, lease-fenced execution, watchdog timeouts, bounded child-process IPC, and tamper-resistant attempt histories.
+<p align="left">
+  <a href="#test-matrix-and-verification"><img src="https://img.shields.io/badge/tests-94%20core%20%2B%2011%20web%20passing-brightgreen.svg?style=flat-square" alt="Tests Passing"></a>
+  <a href="#-architecture"><img src="https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg?style=flat-square&logo=python&logoColor=white" alt="Python 3.12+"></a>
+  <a href="#-core-guarantees"><img src="https://img.shields.io/badge/storage-SQLite%20WAL%20(FULL)-informational.svg?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite WAL"></a>
+  <a href="#2-start-the-loopback-api-server--dashboard"><img src="https://img.shields.io/badge/backend-FastAPI%20%2B%20Typer-009688.svg?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI + Typer"></a>
+  <a href="#2-start-the-loopback-api-server--dashboard"><img src="https://img.shields.io/badge/dashboard-React%2019%20%2B%20TypeScript-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19 + TypeScript"></a>
+  <a href="relay/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-green.svg?style=flat-square" alt="License: Apache-2.0"></a>
+</p>
 
 ---
 
-## Repository Structure
+> [!IMPORTANT]
+> **No Broker Tax**: Relay requires **no Redis, no RabbitMQ, no Celery Flower, and no Docker daemon** to run. It gives you production-grade background job guarantees (leases, retries, dead-letter recovery, attempt history) on single-host systems using native SQLite WAL with immediate transactions.
 
-```text
-resumeproject/
-  README.md                 # Workspace overview and quickstart
-  AGENTS.md                 # Agent and engineering conventions
-  relay/                    # Relay application package
-    pyproject.toml          # Python package manifest (hatchling backend)
-    uv.lock                 # Locked Python dependencies
-    Dockerfile              # Multi-stage production container
-    compose.yaml            # Compose spec (init, API, worker isolation)
-    src/relay/              # Application source
-      domain/               # Domain contracts, error types, handler registry
-      storage/              # SQLite transactions and atomic migrations
-      services/             # Submit, claim, complete, cancel, recover
-      worker/               # Supervised child process runtime & bounded IPC
-      api/                  # FastAPI control routes, security middleware, static SPA
-      cli/                  # Typer CLI (init, serve, worker, db, jobs, doctor)
-      static/               # Bundled production dashboard assets
-    tests/                  # Automated verification suite (T01-T24 matrix)
-    web/                    # Operations dashboard (React 19, TypeScript, Vite)
-    scripts/                # Fullstack E2E, benchmarks, release builder
-  docs/
-    devlog/                 # Measured benchmarks and release verification logs
-    relay/                  # Engineering specifications & ADRs
-      implementation-plan.md # Architecture, schema, milestones M0-M6
-      release-roadmap.md     # Release phases and acceptance gates
-      design-system.md       # Dashboard design specification
-      security.md            # Threat model, STRIDE, security acceptance criteria
-      operations-runbook.md  # Runbook (systemd/Windows, backup/restore, pruning)
-      open-source-operations.md # Open-source governance and policies
-      adr/                   # Architecture Decision Records (0001-0004)
+---
+
+## 🎯 Key Highlights
+
+| Feature | Description |
+| :--- | :--- |
+| 🛡️ **Atomic Lease Fencing** | Time-bounded owner tokens and partial unique database indexes guarantee that zombie, hung, or delayed workers can **never** commit results after a lease expires. |
+| 🔍 **Immutable Attempt Ledger** | Full execution transparency. Every attempt records worker hostname, PID, exact start/finish timestamps, error summaries, and duration. |
+| ⚡ **Zero-Broker Simplicity** | Embedded SQLite WAL engine (`synchronous=FULL`, `busy_timeout=5000`) delivers hundreds of durable transitions/sec with zero external ports. |
+| ⏱️ **Supervised Child Isolation** | Tasks run in isolated child processes via Python's `spawn` context with bounded pipe IPC and watchdog deadlines; crashes never take down the engine. |
+| 📦 **Single-Wheel Web UI** | The React 19 / TypeScript operations dashboard is pre-built and embedded inside the wheel. Served directly by FastAPI with zero Node.js runtime needed. |
+| 🔁 **Deterministic Idempotency** | Cryptographic request hashing prevents duplicate job records for the same client request key across submissions and retries. |
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart TD
+    subgraph Clients["Clients & Operations"]
+        CLI["💻 Typer CLI<br/><code>relay jobs submit</code>"]
+        Browser["🖥️ React 19 Dashboard<br/><code>http://127.0.0.1:8000/</code>"]
+        ExtAPI["📡 REST Client<br/><code>Authorization: Bearer &lt;token&gt;</code>"]
+    end
+
+    subgraph Service["Relay Control Server (127.0.0.1:8000)"]
+        SecMid["🛡️ Security Middleware<br/>(Host/Origin & Streaming Size Guards)"]
+        FastAPI["⚡ FastAPI Control Routes<br/>(/api/v1/jobs, /queues, /workers)"]
+        Static["📦 Bundled Static SPA<br/>(Deep-Link Fallback)"]
+        Recovery["🔄 Background Maintenance<br/>(Recovers Expired Leases)"]
+    end
+
+    subgraph Engine["Durable Storage Layer (SQLite WAL)"]
+        DB[("💾 relay.db (WAL Mode)<br/><code>synchronous=FULL</code>")]
+        T_Jobs["📋 jobs Table<br/>(priority, state, budget)"]
+        T_Attempts["⏳ attempts Table<br/>(idx_running_per_job)"]
+        T_Events["📜 job_events Table<br/>(seq, kind, details)"]
+        T_Idemp["🔑 idempotency_records<br/>(scope, key, request_hash)"]
+    end
+
+    subgraph Workers["Supervised Worker Runtime"]
+        Supervisor["🧠 Supervisor Daemon<br/>(Heartbeats, Slots & Watchdog)"]
+        Child1["⚙️ Spawned Child 1<br/><code>text_summary</code>"]
+        Child2["⚙️ Spawned Child 2<br/><code>batch_statistics</code>"]
+    end
+
+    Clients -->|HTTP / Loopback Only| SecMid
+    SecMid --> FastAPI
+    SecMid --> Static
+    FastAPI --> Engine
+    Recovery --> Engine
+    Supervisor -->|Atomic Claim & Fencing| Engine
+    Supervisor -->|Bounded JSON Pipe| Child1
+    Supervisor -->|Bounded JSON Pipe| Child2
 ```
 
 ---
 
-## Status & Verification
+## 🔄 State Machine & Failure Recovery
 
-Relay has implemented and verified Milestones **M0 through M5** (Phases A–E):
+Every state transition is verified atomic and persisted to the ledger:
 
-- **Durable Core (M1)**: Atomic migrations, idempotent submission, atomic claims, fenced completion, lease recovery, and attempt budgets.
-- **Supervised Worker (M2)**: Isolated child execution via `multiprocessing` spawn context, bounded pipe IPC, watchdog deadlines, and graceful drain.
-- **HTTP API & CLI (M3)**: Authenticated loopback API, Typer CLI (`init`, `serve`, `worker`, `db`, `jobs`, `queues`, `doctor`), Prometheus metrics (`/metrics`), and health endpoints.
-- **Operations Dashboard (M4)**: React 19 + TypeScript SPA with job timeline inspection, queue controls, and accessible interaction flows.
-- **Production Packaging (M5)**: Zero-Node static SPA serving with deep-link fallback, deterministic wheel build script (`build_release.py`), and full-stack E2E automation.
-
-### Test Matrix
-
-All test suites pass cleanly:
-```powershell
-cd relay
-.\.venv\Scripts\python.exe -m pytest                  # 94 Python tests pass
-npm --prefix web test                                # 11 Vitest dashboard tests pass
-.\.venv\Scripts\python.exe scripts/e2e_fullstack.py   # Live full-stack E2E pass
+```mermaid
+stateDiagram-v2
+    [*] --> queued: Submit (with Idempotency-Key)
+    queued --> running: Worker claims job (Lease granted)
+    queued --> canceled: Cancel request (Pending only)
+    
+    running --> succeeded: Complete (Owner token valid)
+    running --> retry_wait: Fail / Watchdog timeout (Attempts remaining)
+    running --> lost: Lease expired & recovered by supervisor
+    
+    retry_wait --> running: Re-claimed after available_at deadline
+    retry_wait --> failed: Attempts exhausted
+    lost --> running: New attempt claimed
+    lost --> failed: Attempt budget exhausted
+    
+    succeeded --> [*]
+    failed --> [*]
+    canceled --> [*]
 ```
 
 ---
 
-## Quickstart
+## 📊 How Relay Compares
 
-### 1. Initialize Database and Credentials
+| Feature | Relay (`relay-jobs`) | Celery | RQ | Temporal |
+| :--- | :---: | :---: | :---: | :---: |
+| **External Broker** | **None** (Embedded SQLite WAL) | Redis / RabbitMQ | Redis | PostgreSQL / Cassandra |
+| **Lease Fencing** | ✅ **Database-Enforced Owner Tokens** | ❌ Visibility timeout races | ❌ Key TTL races | ✅ Activity Heartbeats |
+| **Inspectable History** | ✅ **Full DB Attempt/Event Ledger** | ❌ Ephemeral / lost in logs | ❌ Ephemeral metadata | ✅ Event History |
+| **Operations UI** | ✅ **Bundled Zero-Node React Dashboard** | ⚠️ Flower (separate setup) | ⚠️ rq-dashboard | ✅ Temporal Web UI |
+| **Worker Isolation** | ✅ **Spawned Child + Watchdog IPC** | Fork / Prefork | Fork | Process / Worker Host |
+| **Installation** | **Single Wheel** (`pipx install relay-jobs`) | Multi-service stack | Multi-service stack | Distributed cluster |
+
+---
+
+## 🚀 Quickstart
+
+### 1. Initialize Data Directory & Credentials
 
 ```powershell
 cd relay
 .\.venv\Scripts\relay.exe init
 ```
-This initializes the local data directory, creates a cryptographically secure 256-bit bearer token with restricted OS permissions, runs migrations, and configures the default queue.
+> [!NOTE]
+> Generates a cryptographically random 256-bit token stored with restricted user-only file permissions (Windows SID-based ACL / POSIX 0600) and prepares the SQLite database.
 
 ### 2. Start the Loopback API Server & Dashboard
 
 ```powershell
 .\.venv\Scripts\relay.exe serve --port 8000
 ```
-Visit `http://127.0.0.1:8000/` in your browser. Enter your installation token (found in the local data directory) to authenticate into the dashboard.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser. Enter the token printed by `init` to access the live operations dashboard.
 
 ### 3. Start a Worker Supervisor
 
-In a separate terminal:
 ```powershell
 .\.venv\Scripts\relay.exe worker start --concurrency 2
 ```
 
-### 4. Submit Jobs via CLI
+### 4. Enqueue Work & Inspect Health
 
 ```powershell
-# Submit a text summary task
-.\.venv\Scripts\relay.exe jobs submit text_summary --payload '{"text": "Relay background jobs"}'
+# Enqueue a text analysis job
+.\.venv\Scripts\relay.exe jobs submit text_summary --payload '{"text": "Relay background jobs in Python"}'
 
-# Submit with idempotency key
-.\.venv\Scripts\relay.exe jobs submit text_summary --payload '{"text": "Sample"}' --idempotency-key "req-001"
+# Enqueue with idempotency protection
+.\.venv\Scripts\relay.exe jobs submit text_summary --payload '{"text": "Deduplicated"}' --idempotency-key "req-42"
 
-# Check system health
+# Inspect local health & migration status
 .\.venv\Scripts\relay.exe doctor
 ```
 
 ---
 
-## Core Guarantees & Boundaries
+## 🧪 Test Matrix & Verification
 
-1. **At-Least-Once Execution**: Fenced lease expiration guarantees that stale workers cannot commit results or overwrite active ownership. Handlers must be idempotent or side-effect safe.
-2. **Single-Host Loopback Boundary**: By default, Relay binds strictly to `127.0.0.1` and enforces strict `Host` and `Origin` headers to protect against DNS rebinding and cross-site request forgery.
-3. **No External Broker Required**: Runs on SQLite WAL mode with zero Redis, RabbitMQ, or Docker daemon dependencies for standard local operation.
+Relay is tested with an exhaustive matrix covering concurrency, crash rollbacks, and release isolation:
+
+```powershell
+cd relay
+
+# Run the 94 Python tests (concurrency, races, lifecycle, migrations)
+.\.venv\Scripts\python.exe -m pytest
+
+# Run React dashboard test suite (Vitest + Testing Library)
+npm --prefix web test
+
+# Run live full-stack end-to-end verification
+.\.venv\Scripts\python.exe scripts/e2e_fullstack.py
+```
+
+### Measured Core Performance
+Measured on Windows 11 / AMD 12-core / SQLite 3.49.1 / WAL mode (`synchronous=FULL`):
+- **1 Worker Thread**: **988 submit jobs/sec**, **425 drain jobs/sec**, p50 claim latency **1.21 ms**.
+- **4 Worker Threads**: **957 submit jobs/sec**, **283 drain jobs/sec** (bounded by SQLite single-writer serialization).
+
+---
+
+## 📁 Repository Organization
+
+```text
+resumeproject/
+├── README.md                 # Visual overview and guide
+├── AGENTS.md                 # Coding agent conventions & safety rules
+├── docs/
+│   ├── devlog/               # Measured benchmarks and release verification logs
+│   └── relay/                # Architecture, threat model, runbook, and ADRs
+└── relay/                    # Application package
+    ├── pyproject.toml        # Python manifest (hatchling backend)
+    ├── uv.lock               # Deterministic dependency lockfile
+    ├── Dockerfile            # Multi-stage production container
+    ├── compose.yaml          # Service isolation specification
+    ├── src/relay/            # Domain, storage, worker supervisor, API, and CLI
+    ├── tests/                # T01-T24 acceptance test suite
+    ├── web/                  # React 19 + TypeScript + Vite operations dashboard
+    └── scripts/              # Release builder, benchmarks, and E2E runner
+```
+
+---
+
+## 📜 License
+
+Relay is licensed under the [Apache License, Version 2.0](relay/LICENSE).
 
