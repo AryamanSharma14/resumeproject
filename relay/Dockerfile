@@ -1,5 +1,5 @@
 # Local-only image. Digest-pinned bases and multi-arch rehearsal are release gates.
-FROM node:24.4.1-bookworm-slim AS web
+FROM node:26.9.0-bookworm-slim AS web
 WORKDIR /build/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
