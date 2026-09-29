@@ -207,7 +207,7 @@ def test_real_clock_end_to_end(tmp_path):
     path = str(tmp_path / "wall.db")
     conn = connect(path)
     try:
-        assert apply_migrations(conn) == [1]
+        assert apply_migrations(conn) == [1, 2]
         from relay.services.setup import ensure_queue
 
         ensure_queue(conn, clock=SystemClock(), name="default")

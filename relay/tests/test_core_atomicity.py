@@ -96,14 +96,16 @@ def test_recovery_uses_fresh_attempt_after_preselection(db, clock, rng, default_
 
 
 def test_migration_checksum_insert_failure_rolls_back_ddl(db, monkeypatch):
-    monkeypatch.setitem(runner._FILES, 2, "unused.sql")
+    current_ver = runner.known_latest_version()
+    next_ver = current_ver + 1
+    monkeypatch.setitem(runner._FILES, next_ver, "unused.sql")
     original = runner._load_sql
     monkeypatch.setattr(
         runner,
         "_load_sql",
         lambda v: (
             original(v)
-            if v == 1
+            if v <= current_ver
             else "CREATE TABLE atomic_probe(id INTEGER); INSERT INTO atomic_probe VALUES(1);"
         ),
     )
@@ -113,6 +115,6 @@ def test_migration_checksum_insert_failure_rolls_back_ddl(db, monkeypatch):
     )
     with pytest.raises(sqlite3.IntegrityError, match="ledger failure"):
         runner.apply_migrations(db)
-    assert runner.current_version(db) == 1
+    assert runner.current_version(db) == current_ver
     assert not db.in_transaction
     assert db.execute("SELECT name FROM sqlite_master WHERE name='atomic_probe'").fetchone() is None

@@ -71,6 +71,7 @@ def submit_job(
     timeout_ms: int = DEFAULT_TIMEOUT_MS,
     idempotency_scope: str = "submit",
     idempotency_key: str | None = None,
+    depends_on: list[str] | None = None,
 ) -> SubmitResult:
     """Validate, insert one queued job (+submitted event), resolve idempotency.
 
@@ -89,6 +90,11 @@ def submit_job(
         or not 1 <= len(idempotency_key) <= MAX_IDEMPOTENCY_KEY_LEN
     ):
         raise ValidationError("idempotency key must be 1..200 characters")
+    if depends_on is not None and (
+        not isinstance(depends_on, list)
+        or not all(isinstance(pid, str) and 1 <= len(pid) <= 64 for pid in depends_on)
+    ):
+        raise ValidationError("depends_on must be a list of job ID strings")
     request_hash = _request_hash(
         handler, payload, queue, priority, delay_ms, max_attempts, timeout_ms
     )
@@ -111,12 +117,31 @@ def submit_job(
                     )
                 return {"job_id": row["job_id"], "replayed": True}
 
+        pending_deps = 0
+        actual_available_at = now + delay_ms
+        if depends_on:
+            placeholders = ",".join("?" for _ in depends_on)
+            parent_rows = c.execute(
+                f"SELECT id, state FROM jobs WHERE id IN ({placeholders})", depends_on
+            ).fetchall()
+            found_ids = {r["id"] for r in parent_rows}
+            for pid in depends_on:
+                if pid not in found_ids:
+                    raise ValidationError(f"prerequisite job {pid} not found")
+            for r in parent_rows:
+                if r["state"] in ("failed", "canceled"):
+                    raise ValidationError(f"prerequisite job {r['id']} has already {r['state']}")
+                if r["state"] != "succeeded":
+                    pending_deps += 1
+            if pending_deps > 0:
+                actual_available_at = 9_223_372_036_854_775_807  # Sentinel: future blocked
+
         job_id = str(uuid.uuid4())
         c.execute(
             """INSERT INTO jobs(id, handler, handler_version, queue, payload_json, state,
                  priority, created_at, updated_at, available_at, attempt_count, max_attempts,
-                 timeout_ms)
-               VALUES(?,?,?,?,?,'queued',?,?,?,?,0,?,?)""",
+                 timeout_ms, pending_dependencies_count)
+               VALUES(?,?,?,?,?,'queued',?,?,?,?,0,?,?,?)""",
             (
                 job_id,
                 handler,
@@ -126,9 +151,10 @@ def submit_job(
                 priority,
                 now,
                 now,
-                now + delay_ms,
+                actual_available_at,
                 max_attempts,
                 timeout_ms,
+                pending_deps,
             ),
         )
         c.execute(
@@ -136,6 +162,13 @@ def submit_job(
                VALUES(?,NULL,'submitted',?)""",
             (job_id, now),
         )
+        if depends_on:
+            for pid in set(depends_on):
+                c.execute(
+                    "INSERT OR IGNORE INTO job_dependencies(parent_id, child_id, created_at) "
+                    "VALUES(?,?,?)",
+                    (pid, job_id, now),
+                )
         if idempotency_key is not None:
             c.execute(
                 """INSERT INTO idempotency_records(scope, key, request_hash, job_id, created_at)

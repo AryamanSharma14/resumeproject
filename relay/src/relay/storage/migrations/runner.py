@@ -16,7 +16,10 @@ class MigrationError(RelayError):
     code = "MIGRATION_ERROR"
 
 
-_FILES: Final[dict[int, str]] = {1: "0001_initial.sql"}
+_FILES: Final[dict[int, str]] = {
+    1: "0001_initial.sql",
+    2: "0002_cron_dlq_pipelines.sql",
+}
 
 
 def _load_sql(version: int) -> str:

@@ -58,6 +58,22 @@ def complete_job(
             "INSERT INTO job_events(job_id, attempt_id, kind, created_at) VALUES(?,?,?,?)",
             (job_id, attempt_id, EVENT_SUCCEEDED, now),
         )
+        child_rows = c.execute(
+            "SELECT child_id FROM job_dependencies WHERE parent_id=?", (job_id,)
+        ).fetchall()
+        for cr in child_rows:
+            cid = cr["child_id"]
+            c.execute(
+                """UPDATE jobs
+                   SET pending_dependencies_count = MAX(0, pending_dependencies_count - 1),
+                       available_at = CASE
+                           WHEN pending_dependencies_count - 1 <= 0 THEN ?
+                           ELSE available_at
+                       END,
+                       updated_at = ?
+                   WHERE id=?""",
+                (now, now, cid),
+            )
 
     return write_tx(conn, _body)
 
@@ -70,17 +86,39 @@ def heartbeat(
     attempt_id: str,
     owner_token: str,
     lease_ms: int = 30_000,
+    progress_percent: int | None = None,
+    progress_message: str | None = None,
+    progress_json: str | None = None,
 ) -> bool:
     """Extend the lease if (and only if) still the fenced owner."""
     integer(lease_ms, "lease_ms", 1, 600_000)
+    if progress_percent is not None:
+        integer(progress_percent, "progress_percent", 0, 100)
+    if progress_message is not None and len(progress_message) > 500:
+        progress_message = progress_message[:500]
+    if progress_json is not None and len(progress_json) > 4096:
+        progress_json = progress_json[:4096]
 
     def _beat(c: sqlite3.Connection) -> bool:
         now = clock.now_ms()
         cur = c.execute(
-            """UPDATE jobs SET lease_expires_at=?, updated_at=?
+            """UPDATE jobs SET lease_expires_at=?, updated_at=?,
+                   progress_percent=COALESCE(?, progress_percent),
+                   progress_message=COALESCE(?, progress_message),
+                   progress_json=COALESCE(?, progress_json)
                WHERE id=? AND state='running'"""
             + _FENCE,
-            (now + lease_ms, now, job_id, attempt_id, owner_token, now),
+            (
+                now + lease_ms,
+                now,
+                progress_percent,
+                progress_message,
+                progress_json,
+                job_id,
+                attempt_id,
+                owner_token,
+                now,
+            ),
         )
         if cur.rowcount == 1:
             c.execute(
@@ -151,6 +189,19 @@ def fail_job(
                 "INSERT INTO job_events(job_id, attempt_id, kind, created_at) VALUES(?,?,?,?)",
                 (job_id, attempt_id, EVENT_FAILED, now),
             )
+            child_rows = c.execute(
+                "SELECT child_id FROM job_dependencies WHERE parent_id=?", (job_id,)
+            ).fetchall()
+            for cr in child_rows:
+                cid = cr["child_id"]
+                c.execute(
+                    """UPDATE jobs
+                       SET state='canceled', finished_at=?, updated_at=?,
+                           last_error_code='UPSTREAM_FAILED',
+                           last_error_summary='Prerequisite parent job failed'
+                       WHERE id=? AND state='queued' AND pending_dependencies_count > 0""",
+                    (now, now, cid),
+                )
             return {"outcome": "failed"}
 
         delay = backoff_delay_ms(row["attempt_count"], rng)

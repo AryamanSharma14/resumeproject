@@ -40,4 +40,17 @@ def cancel_job(conn: sqlite3.Connection, *, clock: Clock, job_id: str) -> dict[s
             "INSERT INTO job_events(job_id, attempt_id, kind, created_at) VALUES(?,NULL,?,?)",
             (job_id, EVENT_CANCELED, now),
         )
+        child_rows = conn.execute(
+            "SELECT child_id FROM job_dependencies WHERE parent_id=?", (job_id,)
+        ).fetchall()
+        for cr in child_rows:
+            cid = cr["child_id"]
+            conn.execute(
+                """UPDATE jobs
+                   SET state='canceled', finished_at=?, updated_at=?,
+                       last_error_code='UPSTREAM_CANCELED',
+                       last_error_summary='Prerequisite parent job was canceled'
+                   WHERE id=? AND state='queued' AND pending_dependencies_count > 0""",
+                (now, now, cid),
+            )
     return {"job_id": job_id, "state": "canceled"}

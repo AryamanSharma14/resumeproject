@@ -167,6 +167,12 @@ def get_handler(name: str) -> HandlerSpec:
         raise UnknownHandlerError(f"unknown handler: {name}") from None
 
 
+def register_handler(spec: HandlerSpec) -> None:
+    if not isinstance(spec, HandlerSpec):
+        raise ValidationError("handler must be a HandlerSpec instance")
+    HANDLERS[spec.name] = spec
+
+
 def validate_payload(name: str, payload: dict[str, Any]) -> None:
     if not isinstance(payload, dict) or any(not isinstance(k, str) for k in payload):
         raise ValidationError("payload must be a JSON object with string keys")

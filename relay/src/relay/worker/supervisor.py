@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import multiprocessing
 import os
@@ -22,6 +23,7 @@ from relay.domain.policies import SystemRandom
 from relay.domain.registry import HANDLERS
 from relay.services.claim import claim_job
 from relay.services.complete import complete_job, fail_job, heartbeat
+from relay.services.cron import evaluate_due_schedules
 from relay.services.recovery import recover_expired_jobs
 from relay.storage.migrations import current_version, known_latest_version
 from relay.storage.transactions import connect, immediate_transaction
@@ -188,9 +190,19 @@ class Supervisor:
             elif slot.exchange.done.is_set():
                 slot.response = slot.exchange.response
         try:
+            prog = slot.exchange.latest_progress
+            p_pct = prog.get("percent") if prog else None
+            p_msg = prog.get("message") if prog else None
+            p_data = json.dumps(prog.get("data")) if prog and prog.get("data") is not None else None
             if now >= slot.renew_at:
                 if not heartbeat(
-                    self.conn, clock=self.clock, **self._fence(slot), lease_ms=self.config.lease_ms
+                    self.conn,
+                    clock=self.clock,
+                    **self._fence(slot),
+                    lease_ms=self.config.lease_ms,
+                    progress_percent=p_pct,
+                    progress_message=p_msg,
+                    progress_json=p_data,
                 ):
                     self._dispose(slot)
                     return
@@ -245,6 +257,7 @@ class Supervisor:
                         registration = now + self.config.heartbeat_ms / 1000
                     if now >= maintenance:
                         recover_expired_jobs(self.conn, clock=self.clock, rng=self.rng)
+                        evaluate_due_schedules(self.conn, clock=self.clock)
                         maintenance = now + self.config.recovery_ms / 1000
                     if self.drain_at is None:
                         while len(self.slots) < self.config.concurrency:

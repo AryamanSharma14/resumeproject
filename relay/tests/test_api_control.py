@@ -205,7 +205,7 @@ def test_queries_pagination_validation_overview_and_openapi(tmp_path: Path) -> N
         summary = client.get("/api/v1/overview").json()
         assert summary["window"] == "retained" and summary["jobs"]["queued"] == 4
         assert summary["queues"][0]["due_depth"] == 4
-        assert client.get("/api/v1/system").json()["schema_version"] == 1
+        assert client.get("/api/v1/system").json()["schema_version"] == 2
         assert 'relay_jobs{queue="default",state="queued"} 4' in client.get("/metrics").text
         assert len(client.get("/api/v1/handlers").json()["items"]) == 4
         assert "/api/v1/jobs" in client.get("/api/v1/openapi.json").json()["paths"]

@@ -47,8 +47,31 @@ def _watch_parent(done: threading.Event) -> None:
             os._exit(72)
 
 
+_CURRENT_CHANNEL: Connection | None = None
+
+
+def report_progress(
+    percent: int | None = None,
+    message: str | None = None,
+    data: dict[str, Any] | None = None,
+) -> None:
+    """Report task execution progress back to supervisor over the IPC pipe."""
+    global _CURRENT_CHANNEL
+    if _CURRENT_CHANNEL is not None:
+        with suppress(Exception):
+            msg = {
+                "kind": "progress",
+                "percent": percent,
+                "message": message,
+                "data": data,
+            }
+            _CURRENT_CHANNEL.send_bytes(encode(msg))
+
+
 def child_main(channel: Connection) -> None:
     """Importable spawn target. No database path, connection or owner token."""
+    global _CURRENT_CHANNEL
+    _CURRENT_CHANNEL = channel
     done = threading.Event()
     threading.Thread(target=_watch_parent, args=(done,), daemon=True).start()
     try:
@@ -78,6 +101,7 @@ def child_main(channel: Connection) -> None:
                 encode({"ok": False, "code": "CHILD_PROTOCOL_ERROR", "retryable": False})
             )
     finally:
+        _CURRENT_CHANNEL = None
         done.set()
         channel.close()
 
@@ -88,6 +112,7 @@ class Exchange:
     def __init__(self, channel: Connection, request: bytes) -> None:
         self.done = threading.Event()
         self.response: dict[str, Any] | None = None
+        self.latest_progress: dict[str, Any] | None = None
         self.channel = channel
         self.thread = threading.Thread(target=self._run, args=(request,), daemon=True)
         self.thread.start()
@@ -95,9 +120,16 @@ class Exchange:
     def _run(self, request: bytes) -> None:
         try:
             self.channel.send_bytes(request)
-            self.response = decode(self.channel.recv_bytes(MAX_MESSAGE_BYTES))
+            while True:
+                msg = decode(self.channel.recv_bytes(MAX_MESSAGE_BYTES))
+                if msg.get("kind") == "progress":
+                    self.latest_progress = msg
+                else:
+                    self.response = msg
+                    break
         except (OSError, EOFError, ValueError):
-            self.response = {"ok": False, "code": "CHILD_PROTOCOL_ERROR", "retryable": False}
+            if self.response is None:
+                self.response = {"ok": False, "code": "CHILD_PROTOCOL_ERROR", "retryable": False}
         finally:
             self.done.set()
 

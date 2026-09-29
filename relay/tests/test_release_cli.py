@@ -31,10 +31,10 @@ def test_migration_cli_bootstrap_restart_unknown_version(tmp_path: Path) -> None
     db = tmp_path / "release.db"
     first = cli(db, tmp_path)
     assert first.returncode == 0, first.stderr
-    assert json.loads(first.stdout) == {"applied": [1], "schema_version": 1}
+    assert json.loads(first.stdout) == {"applied": [1, 2], "schema_version": 2}
     restarted = cli(db, tmp_path)
     assert restarted.returncode == 0, restarted.stderr
-    assert json.loads(restarted.stdout) == {"applied": [], "schema_version": 1}
+    assert json.loads(restarted.stdout) == {"applied": [], "schema_version": 2}
     # sqlite connection context managers commit/rollback but do NOT close connections.
     # Explicit closing is essential for Windows teardown and subprocess restart checks.
     with closing(sqlite3.connect(db)) as conn:

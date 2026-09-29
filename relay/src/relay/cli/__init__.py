@@ -10,6 +10,8 @@ from typing import Annotated
 import typer
 
 from relay.cli.client import request
+from relay.cli.cron import app as cron_app
+from relay.cli.dlq import app as dlq_app
 from relay.cli.jobs import app as jobs_app
 from relay.cli.jobs import emit
 from relay.config import data_directory, database_path, initialize, read_token
@@ -52,6 +54,8 @@ app.add_typer(worker_app, name="worker")
 app.add_typer(workers_app, name="workers")
 app.add_typer(queues_app, name="queues")
 app.add_typer(jobs_app, name="jobs")
+app.add_typer(cron_app, name="cron")
+app.add_typer(dlq_app, name="dlq")
 db_app.command("migrate")(migrate)
 
 

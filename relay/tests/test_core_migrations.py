@@ -24,7 +24,7 @@ def test_original_schema_query_before_creation_defect_is_fixed():
         conn = connect(path)
         try:
             assert runner.current_version(conn) == 0
-            assert runner.apply_migrations(conn) == [1]
+            assert runner.apply_migrations(conn) == [1, 2]
             assert runner.apply_migrations(conn) == []
         finally:
             conn.close()
@@ -34,11 +34,11 @@ def test_t01_fresh_restart_and_newer_schema(tmp_path):
     path = str(tmp_path / "fresh.db")
     conn = connect(path)
     assert runner.current_version(conn) == 0
-    assert runner.apply_migrations(conn) == [1]
+    assert runner.apply_migrations(conn) == [1, 2]
     conn.close()
     conn = connect(path)
     try:
-        assert runner.current_version(conn) == 1
+        assert runner.current_version(conn) == 2
         assert runner.apply_migrations(conn) == []
         assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
@@ -59,7 +59,7 @@ def test_migration_ddl_and_ledger_rollback(tmp_path, monkeypatch):
         assert not conn.in_transaction
         assert conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall() == []
         monkeypatch.setattr(runner, "_load_sql", original)
-        assert runner.apply_migrations(conn) == [1]
+        assert runner.apply_migrations(conn) == [1, 2]
         conn.execute("UPDATE schema_migrations SET checksum='changed'")
         with pytest.raises(runner.MigrationError):
             runner.apply_migrations(conn)
