@@ -1,7 +1,7 @@
 """Exercise real domain behavior while verifying pytest discovery."""
 
-from relay.domain.clock import FakeClock
-from relay.domain.policies import DeterministicRandom, backoff_delay_ms
+from walflow.domain.clock import FakeClock
+from walflow.domain.policies import DeterministicRandom, backoff_delay_ms
 
 
 def test_retry_deadline_uses_injected_clock_and_randomness() -> None:

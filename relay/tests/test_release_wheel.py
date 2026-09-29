@@ -37,21 +37,21 @@ class AssetParser(HTMLParser):
 def inspect_wheel(wheel: Path) -> dict[str, object]:
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
-        assert "relay/static/index.html" in names, "built UI index missing from wheel"
-        assert "relay/storage/migrations/0001_initial.sql" in names, "migration SQL missing"
+        assert "walflow/static/index.html" in names, "built UI index missing from wheel"
+        assert "walflow/storage/migrations/0001_initial.sql" in names, "migration SQL missing"
         entry_file = next(n for n in names if n.endswith(".dist-info/entry_points.txt"))
         entry = configparser.ConfigParser()
         entry.read_string(archive.read(entry_file).decode())
-        assert entry["console_scripts"]["relay"].replace(" ", "") == "relay.cli:app"
+        assert entry["console_scripts"]["walflow"].replace(" ", "") == "walflow.cli:app"
         parser = AssetParser()
-        parser.feed(archive.read("relay/static/index.html").decode("utf-8"))
+        parser.feed(archive.read("walflow/static/index.html").decode("utf-8"))
         local: list[str] = []
         for source in parser.assets:
             url = urlsplit(source)
             assert not url.scheme and not url.netloc, f"external asset not self-contained: {source}"
             path = unquote(url.path).lstrip("/")
             assert ".." not in PurePosixPath(path).parts, "unsafe asset reference"
-            assert f"relay/static/{path}" in names, f"asset missing from wheel: {path}"
+            assert f"walflow/static/{path}" in names, f"asset missing from wheel: {path}"
             local.append(path)
         assert any(p.endswith(".js") for p in local), "UI JavaScript missing"
         assert any(p.endswith(".css") for p in local), "UI stylesheet missing"
@@ -66,12 +66,12 @@ import sys
 from contextlib import closing
 from pathlib import Path
 from fastapi.testclient import TestClient
-import relay
-from relay.api import create_app
-from relay.storage.migrations import apply_migrations
-from relay.storage.transactions import connect
-assert Path(relay.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
-assert (importlib.resources.files('relay.storage.migrations') / '0001_initial.sql').is_file()
+import walflow
+from walflow.api import create_app
+from walflow.storage.migrations import apply_migrations
+from walflow.storage.transactions import connect
+assert Path(walflow.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
+assert (importlib.resources.files('walflow.storage.migrations') / '0001_initial.sql').is_file()
 db = str(Path.cwd() / 'fresh.db')
 with closing(connect(db)) as conn:
     assert apply_migrations(conn) == [1]
@@ -122,7 +122,7 @@ def main() -> None:
         venv.EnvBuilder(with_pip=True).create(target)
         binary = target / ("Scripts" if os.name == "nt" else "bin")
         python = binary / ("python.exe" if os.name == "nt" else "python")
-        cli = binary / ("relay.exe" if os.name == "nt" else "relay")
+        cli = binary / ("walflow.exe" if os.name == "nt" else "walflow")
         run(
             [
                 str(python),

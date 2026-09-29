@@ -2,17 +2,17 @@
 
 import pytest
 
-from relay.domain.errors import (
+from walflow.domain.errors import (
     IdempotencyConflictError,
     UnknownHandlerError,
     UnknownQueueError,
     ValidationError,
 )
-from relay.domain.validation import bounded_json, integer, queue_name
-from relay.services.claim import claim_job
-from relay.services.complete import complete_job
-from relay.services.setup import pause_queue, resume_queue
-from relay.services.submit import submit_job
+from walflow.domain.validation import bounded_json, integer, queue_name
+from walflow.services.claim import claim_job
+from walflow.services.complete import complete_job
+from walflow.services.setup import pause_queue, resume_queue
+from walflow.services.submit import submit_job
 
 
 def test_integer_rejects_bools_and_coercions():

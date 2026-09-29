@@ -6,10 +6,10 @@ import sqlite3
 
 import pytest
 
-from relay.domain.clock import FakeClock
-from relay.domain.policies import DeterministicRandom
-from relay.storage import migrations
-from relay.storage.transactions import connect
+from walflow.domain.clock import FakeClock
+from walflow.domain.policies import DeterministicRandom
+from walflow.storage import migrations
+from walflow.storage.transactions import connect
 
 
 @pytest.fixture()
@@ -37,7 +37,7 @@ def rng():
 
 @pytest.fixture()
 def default_queue(db, clock):
-    from relay.services.setup import ensure_queue
+    from walflow.services.setup import ensure_queue
 
     ensure_queue(db, clock=clock, name="default")
     return "default"

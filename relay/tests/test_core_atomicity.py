@@ -5,12 +5,12 @@ from contextlib import closing, contextmanager
 
 import pytest
 
-from relay.services import recovery
-from relay.services.claim import claim_job
-from relay.services.complete import complete_job, fail_job
-from relay.services.submit import submit_job
-from relay.storage.migrations import runner
-from relay.storage.transactions import connect, immediate_transaction
+from walflow.services import recovery
+from walflow.services.claim import claim_job
+from walflow.services.complete import complete_job, fail_job
+from walflow.services.submit import submit_job
+from walflow.storage.migrations import runner
+from walflow.storage.transactions import connect, immediate_transaction
 
 
 def claim(db, clock):

@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import sqlite3
 
-from relay.domain.clock import FakeClock
-from relay.domain.policies import DeterministicRandom
-from relay.services.cancel import cancel_job
-from relay.services.claim import claim_job
-from relay.services.complete import complete_job, fail_job
-from relay.services.submit import submit_job
+from walflow.domain.clock import FakeClock
+from walflow.domain.policies import DeterministicRandom
+from walflow.services.cancel import cancel_job
+from walflow.services.claim import claim_job
+from walflow.services.complete import complete_job, fail_job
+from walflow.services.submit import submit_job
 
 
 def test_pipeline_dependency_unblocks_on_success(

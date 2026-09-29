@@ -17,7 +17,7 @@ def cli(db: Path, cwd: Path) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env.pop("PYTHONPATH", None)
     return subprocess.run(
-        [sys.executable, "-c", "from relay.cli import app; app()", "migrate", "--db", str(db)],
+        [sys.executable, "-c", "from walflow.cli import app; app()", "migrate", "--db", str(db)],
         cwd=cwd,
         env=env,
         capture_output=True,

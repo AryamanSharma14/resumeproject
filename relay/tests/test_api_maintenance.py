@@ -9,11 +9,11 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from relay.api import create_app
-from relay.api.operations import backup_database, prune_jobs
-from relay.domain.clock import SystemClock
-from relay.services.claim import claim_job
-from relay.storage.transactions import connect
+from walflow.api import create_app
+from walflow.api.operations import backup_database, prune_jobs
+from walflow.domain.clock import SystemClock
+from walflow.services.claim import claim_job
+from walflow.storage.transactions import connect
 
 AUTH = {"Authorization": "Bearer test-maintenance-token"}
 BODY = {"handler": "text_summary", "payload": {"text": "durable history"}}
@@ -78,7 +78,7 @@ def test_t23_prune_preserves_running_and_retained_lineage_then_expires_keys(tmp_
 
 
 def test_startup_maintenance_recovers_expired_attempt_without_worker(tmp_path: Path) -> None:
-    from relay.domain.clock import FakeClock
+    from walflow.domain.clock import FakeClock
 
     db = str(tmp_path / "relay.db")
     app = create_app(db, "test-maintenance-token")

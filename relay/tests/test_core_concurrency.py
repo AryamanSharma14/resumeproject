@@ -10,15 +10,15 @@ import threading
 
 import pytest
 
-from relay.domain.errors import (
+from walflow.domain.errors import (
     IdempotencyConflictError,
     JobNotCancelableError,
     ValidationError,
 )
-from relay.services.cancel import cancel_job
-from relay.services.claim import claim_job
-from relay.services.submit import submit_job
-from relay.storage.transactions import connect
+from walflow.services.cancel import cancel_job
+from walflow.services.claim import claim_job
+from walflow.services.submit import submit_job
+from walflow.storage.transactions import connect
 
 
 def _db_path(conn: sqlite3.Connection) -> str:
@@ -162,7 +162,7 @@ def test_t05_crash_inside_transition_is_atomic(db, clock, default_queue):
 
 
 def test_t06_claim_vs_pending_cancel(db, clock, rng, default_queue):
-    from relay.services.recovery import recover_expired_jobs
+    from walflow.services.recovery import recover_expired_jobs
 
     submit_job(db, clock=clock, handler="text_summary", payload={"text": "x"}, idempotency_key="c1")
     c = claim_job(

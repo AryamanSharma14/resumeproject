@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from relay.api import create_app
-from relay.api.security import MAX_BODY_BYTES
+from walflow.api import create_app
+from walflow.api.security import MAX_BODY_BYTES
 
 TOKEN = "test-security-token"
 AUTH = {"Authorization": f"Bearer {TOKEN}"}
@@ -116,7 +116,7 @@ def test_t24_safe_spa_and_assets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     (static / "assets").mkdir()
     (static / "assets" / "app.js").write_text("console.log('test');", encoding="utf-8")
     (tmp_path / "secret.txt").write_text(TOKEN, encoding="utf-8")
-    monkeypatch.setattr("relay.api.app.STATIC_DIR", static)
+    monkeypatch.setattr("walflow.api.app.STATIC_DIR", static)
     client = TestClient(create_app(str(tmp_path / "relay.db"), TOKEN), headers=AUTH)
     for route in ("/", "/jobs", "/jobs/example", "/queues/default", "/system"):
         response = client.get(route)

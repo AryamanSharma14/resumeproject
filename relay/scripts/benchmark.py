@@ -22,14 +22,14 @@ from contextlib import closing
 from pathlib import Path
 from typing import Any
 
-from relay.domain.clock import SystemClock
-from relay.domain.registry import get_handler
-from relay.services.claim import claim_job
-from relay.services.complete import complete_job
-from relay.services.setup import ensure_queue
-from relay.services.submit import submit_job
-from relay.storage.migrations import apply_migrations
-from relay.storage.transactions import connect
+from walflow.domain.clock import SystemClock
+from walflow.domain.registry import get_handler
+from walflow.services.claim import claim_job
+from walflow.services.complete import complete_job
+from walflow.services.setup import ensure_queue
+from walflow.services.submit import submit_job
+from walflow.storage.migrations import apply_migrations
+from walflow.storage.transactions import connect
 
 
 def percentiles(samples: list[float]) -> dict[str, float]:

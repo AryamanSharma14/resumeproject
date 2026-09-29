@@ -4,15 +4,15 @@ from contextlib import closing
 
 import pytest
 
-from relay.domain.errors import JobNotCancelableError, StaleOwnerError
-from relay.services.cancel import cancel_job
-from relay.services.claim import claim_job
-from relay.services.complete import complete_job, heartbeat
-from relay.services.recovery import recover_expired_jobs
-from relay.services.setup import pause_queue
-from relay.services.submit import submit_job
-from relay.storage.transactions import connect
 from test_core_concurrency import _db_path, _run_in_threads
+from walflow.domain.errors import JobNotCancelableError, StaleOwnerError
+from walflow.services.cancel import cancel_job
+from walflow.services.claim import claim_job
+from walflow.services.complete import complete_job, heartbeat
+from walflow.services.recovery import recover_expired_jobs
+from walflow.services.setup import pause_queue
+from walflow.services.submit import submit_job
+from walflow.storage.transactions import connect
 
 
 def _claim(conn, clock):

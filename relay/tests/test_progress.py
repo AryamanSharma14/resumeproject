@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 import sqlite3
 
-from relay.api.queries import get_job
-from relay.domain.clock import FakeClock
-from relay.services.claim import claim_job
-from relay.services.complete import heartbeat
-from relay.services.submit import submit_job
+from walflow.api.queries import get_job
+from walflow.domain.clock import FakeClock
+from walflow.services.claim import claim_job
+from walflow.services.complete import heartbeat
+from walflow.services.submit import submit_job
 
 
 def test_heartbeat_persists_progress(db: sqlite3.Connection, default_queue: str) -> None:

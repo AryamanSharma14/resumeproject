@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import sqlite3
 
-from relay.domain.clock import FakeClock
-from relay.domain.policies import DeterministicRandom
-from relay.services.claim import claim_job
-from relay.services.complete import fail_job
-from relay.services.dlq import list_dlq_jobs, redrive_bulk, redrive_job
-from relay.services.submit import submit_job
+from walflow.domain.clock import FakeClock
+from walflow.domain.policies import DeterministicRandom
+from walflow.services.claim import claim_job
+from walflow.services.complete import fail_job
+from walflow.services.dlq import list_dlq_jobs, redrive_bulk, redrive_job
+from walflow.services.submit import submit_job
 
 
 def test_dlq_query_and_redrive(db: sqlite3.Connection, default_queue: str) -> None:

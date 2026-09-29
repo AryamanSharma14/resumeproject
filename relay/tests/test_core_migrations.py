@@ -6,8 +6,8 @@ import tempfile
 
 import pytest
 
-from relay.storage.migrations import runner
-from relay.storage.transactions import connect
+from walflow.storage.migrations import runner
+from walflow.storage.transactions import connect
 
 
 def test_original_schema_query_before_creation_defect_is_fixed():

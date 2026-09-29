@@ -25,7 +25,7 @@ import uvicorn
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from relay.api import create_app  # noqa: E402
+from walflow.api import create_app  # noqa: E402
 
 TOKEN = "e2e-fullstack-token-9876543210"
 POLL = 0.25

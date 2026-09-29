@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from relay import Relay
-from relay.domain.registry import HANDLERS
-from relay.storage.transactions import connect
+from walflow import Relay
+from walflow.domain.registry import HANDLERS
+from walflow.storage.transactions import connect
 
 
 def test_sdk_task_decorator_registers_and_runs_sync(tmp_path: Path) -> None:
@@ -29,9 +29,9 @@ def test_sdk_task_decorator_registers_and_runs_sync(tmp_path: Path) -> None:
 def test_sdk_task_delay_submits_job(tmp_path: Path, default_queue: str) -> None:
     db_file = tmp_path / "sdk_delay.db"
     conn = connect(str(db_file))
-    from relay.domain.clock import SystemClock
-    from relay.services.setup import ensure_queue
-    from relay.storage.migrations import apply_migrations
+    from walflow.domain.clock import SystemClock
+    from walflow.services.setup import ensure_queue
+    from walflow.storage.migrations import apply_migrations
 
     apply_migrations(conn)
     ensure_queue(conn, clock=SystemClock(), name="default")

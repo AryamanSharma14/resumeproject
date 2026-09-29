@@ -11,13 +11,13 @@ from pathlib import Path
 
 import pytest
 
-from relay.domain.clock import SystemClock
-from relay.services.setup import ensure_queue
-from relay.services.submit import submit_job
-from relay.storage.migrations import apply_migrations
-from relay.storage.transactions import connect
-from relay.worker import Supervisor, WorkerConfig
-from relay.worker.ipc import MAX_MESSAGE_BYTES, child_main, encode
+from walflow.domain.clock import SystemClock
+from walflow.services.setup import ensure_queue
+from walflow.services.submit import submit_job
+from walflow.storage.migrations import apply_migrations
+from walflow.storage.transactions import connect
+from walflow.worker import Supervisor, WorkerConfig
+from walflow.worker.ipc import MAX_MESSAGE_BYTES, child_main, encode
 
 
 def run_worker(path: str, duration: float, grace: int = 2000) -> None:

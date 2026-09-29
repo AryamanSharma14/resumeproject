@@ -3,13 +3,13 @@
 import contextlib
 import random
 
-from relay.domain.errors import StaleOwnerError
-from relay.domain.policies import backoff_delay_ms
-from relay.services.cancel import cancel_job
-from relay.services.claim import claim_job
-from relay.services.complete import complete_job, fail_job, heartbeat
-from relay.services.recovery import recover_expired_jobs
-from relay.services.submit import submit_job
+from walflow.domain.errors import StaleOwnerError
+from walflow.domain.policies import backoff_delay_ms
+from walflow.services.cancel import cancel_job
+from walflow.services.claim import claim_job
+from walflow.services.complete import complete_job, fail_job, heartbeat
+from walflow.services.recovery import recover_expired_jobs
+from walflow.services.submit import submit_job
 
 
 def _owner(claim: dict) -> dict:
@@ -200,15 +200,15 @@ def test_backoff_delay_bounds_and_retry_deadline(db, clock, rng, default_queue):
 
 def test_real_clock_end_to_end(tmp_path):
     """Small end-to-end pass with the production wall clock (no injection)."""
-    from relay.domain.clock import SystemClock
-    from relay.storage.migrations import apply_migrations
-    from relay.storage.transactions import connect
+    from walflow.domain.clock import SystemClock
+    from walflow.storage.migrations import apply_migrations
+    from walflow.storage.transactions import connect
 
     path = str(tmp_path / "wall.db")
     conn = connect(path)
     try:
         assert apply_migrations(conn) == [1, 2]
-        from relay.services.setup import ensure_queue
+        from walflow.services.setup import ensure_queue
 
         ensure_queue(conn, clock=SystemClock(), name="default")
         clock = SystemClock()

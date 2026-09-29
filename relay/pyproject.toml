@@ -1,5 +1,5 @@
 [project]
-name = "relay-jobs"
+name = "walflow"
 version = "0.2.0"
 description = "Local-first durable background job system with inspectable attempts, leases and recovery."
 readme = "README.md"
@@ -14,7 +14,8 @@ dependencies = [
 ]
 
 [project.scripts]
-relay = "relay.cli:app"
+walflow = "walflow.cli:app"
+relay = "walflow.cli:app"
 
 [dependency-groups]
 dev = [
@@ -28,7 +29,7 @@ requires = ["hatchling==1.32.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/relay"]
+packages = ["src/walflow"]
 
 [tool.ruff]
 line-length = 100
@@ -41,7 +42,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.12"
 strict = true
 mypy_path = "src"
-packages = ["relay"]
+packages = ["walflow"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

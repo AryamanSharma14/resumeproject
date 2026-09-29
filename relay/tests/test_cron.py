@@ -6,8 +6,8 @@ import sqlite3
 
 import pytest
 
-from relay.domain.clock import FakeClock
-from relay.services.cron import (
+from walflow.domain.clock import FakeClock
+from walflow.services.cron import (
     CronParseError,
     add_schedule,
     compute_next_run,

@@ -1,4 +1,4 @@
-# Relay (`relay-jobs`)
+# Walflow (`walflow`)
 
 <p align="left">
   <strong>The inspectable, local-first background job engine for Python.</strong><br>
@@ -7,8 +7,8 @@
 
 <p align="left">
   <a href="#test-matrix-and-verification"><img src="https://img.shields.io/badge/tests-104%20core%20%2B%2011%20web%20passing-brightgreen.svg?style=flat-square" alt="Tests Passing"></a>
-  <a href="#architecture"><img src="https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg?style=flat-square&logo=python&logoColor=white" alt="Python 3.12+"></a>
-  <a href="#core-guarantees"><img src="https://img.shields.io/badge/storage-SQLite%20WAL%20(FULL)-informational.svg?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite WAL"></a>
+  <a href="#architecture-and-subsystems"><img src="https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg?style=flat-square&logo=python&logoColor=white" alt="Python 3.12+"></a>
+  <a href="#key-capabilities"><img src="https://img.shields.io/badge/storage-SQLite%20WAL%20(FULL)-informational.svg?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite WAL"></a>
   <a href="#quickstart"><img src="https://img.shields.io/badge/backend-FastAPI%20%2B%20Typer-009688.svg?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI + Typer"></a>
   <a href="#quickstart"><img src="https://img.shields.io/badge/dashboard-React%2019%20%2B%20TypeScript-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19 + TypeScript"></a>
   <a href="relay/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-green.svg?style=flat-square" alt="License: Apache-2.0"></a>
@@ -17,7 +17,7 @@
 ---
 
 > [!IMPORTANT]
-> **No Broker Tax**: Relay requires **no Redis, no RabbitMQ, no Celery Flower, and no Docker daemon** to run. It delivers production-grade background job guarantees (leases, retries, dead-letter recovery, attempt history, recurring schedules, and dependency pipelines) on single-host systems using native SQLite WAL with immediate write transactions.
+> **No Broker Tax**: Walflow requires **no Redis, no RabbitMQ, no Celery Flower, and no Docker daemon** to run. It delivers production-grade background job guarantees (leases, retries, dead-letter recovery, attempt history, recurring schedules, and dependency pipelines) on single-host systems using native SQLite WAL with immediate write transactions.
 
 ---
 
@@ -26,13 +26,13 @@
 ```mermaid
 flowchart TD
     subgraph Clients["Clients & Operations"]
-        CLI["Typer CLI<br/><code>relay jobs submit / cron / dlq</code>"]
-        SDK["Python SDK<br/><code>@relay.task / .delay()</code>"]
+        CLI["Typer CLI<br/><code>walflow jobs submit / cron / dlq</code>"]
+        SDK["Python SDK<br/><code>@task / .delay()</code>"]
         Browser["React 19 Dashboard<br/><code>http://127.0.0.1:8000/</code>"]
         ExtAPI["REST & SSE Client<br/><code>Authorization: Bearer &lt;token&gt;</code>"]
     end
 
-    subgraph Service["Relay Control Server (127.0.0.1:8000)"]
+    subgraph Service["Walflow Control Server (127.0.0.1:8000)"]
         SecMid["Security Middleware<br/>(Host/Origin & Streaming Size Guards)"]
         FastAPI["FastAPI Control Routes<br/>(/api/v1/jobs, /schedules, /dlq, /events/stream)"]
         Static["Bundled Static SPA<br/>(Deep-Link Fallback)"]
@@ -40,7 +40,7 @@ flowchart TD
     end
 
     subgraph Engine["Durable Storage Layer (SQLite WAL)"]
-        DB[("relay.db (WAL Mode)<br/><code>synchronous=FULL</code>")]
+        DB[("walflow.db (WAL Mode)<br/><code>synchronous=FULL</code>")]
         T_Jobs["jobs Table<br/>(priority, state, budget, progress)"]
         T_Attempts["attempts Table<br/>(idx_running_per_job)"]
         T_Schedules["cron_schedules Table<br/>(expression, next_run_at)"]
@@ -72,7 +72,7 @@ flowchart TD
 | Subsystem | Badge | Description |
 | :--- | :---: | :--- |
 | **Atomic Lease Fencing** | `[CORE]` | Time-bounded owner tokens and partial unique database indexes guarantee that zombie, hung, or delayed workers can **never** commit results after a lease expires. |
-| **Pythonic Task Decorator** | `[SDK]` | Modern, ergonomic `@relay.task(queue="...", priority=...)` decorator with type-safe `.delay(...)` dispatch and pipeline chaining. |
+| **Pythonic Task Decorator** | `[SDK]` | Modern, ergonomic `@task(queue="...", priority=...)` decorator with type-safe `.delay(...)` dispatch and pipeline chaining. |
 | **Drift-Free Cron Engine** | `[CRON]` | Standard 5-field cron parser evaluating recurring schedules atomically in SQLite transactions. Immune to worker restarts and drift. |
 | **Dead-Letter Queue & Redrive** | `[DLQ]` | Automatically captures exhausted jobs with full error traces. Supports single and bulk redriving with in-flight payload correction. |
 | **Dependency Pipelines (DAG)** | `[DAG]` | Declare task prerequisites with `depends_on=[...]`. Blocked jobs are indexed out of claim loops and unblock automatically on parent completion. |
@@ -111,20 +111,20 @@ stateDiagram-v2
 
 ---
 
-## How Relay Compares
+## How Walflow Compares
 
-| Feature | Relay (`relay-jobs`) | Celery | RQ | Temporal |
+| Feature | Walflow (`walflow`) | Celery | RQ | Temporal |
 | :--- | :---: | :---: | :---: | :---: |
 | **External Broker** | **None** (Embedded SQLite WAL) | Redis / RabbitMQ | Redis | PostgreSQL / Cassandra |
 | **Lease Fencing** | **Database-Enforced Owner Tokens** | Visibility timeout races | Key TTL races | Activity Heartbeats |
-| **Python SDK** | **`@relay.task` + `.delay()`** | `@app.task` + `.delay()` | `@job` decorator | Workflow / Activity SDK |
+| **Python SDK** | **`@task` + `.delay()`** | `@app.task` + `.delay()` | `@job` decorator | Workflow / Activity SDK |
 | **Cron Schedules** | **Integrated SQLite Engine** | Celery Beat (extra process) | rq-scheduler (extra daemon) | Temporal Schedules |
 | **Dead-Letter Queue** | **Built-in DLQ + Bulk Redrive** | Manual routing config | FailedJobRegistry | Execution Reset API |
 | **DAG Pipelines** | **`depends_on` Cascade Resolution** | Canvas primitives (chains/chords) | Simple depends_on | Orchestrated Workflows |
 | **Progress Reporting** | **Child IPC -> DB Heartbeat -> SSE** | Custom state update | Custom meta dict | Activity Heartbeat details |
 | **Operations UI** | **Bundled Zero-Node React Dashboard** | Flower (separate setup) | rq-dashboard | Temporal Web UI |
 | **Worker Isolation** | **Spawned Child + Watchdog IPC** | Fork / Prefork | Fork | Process / Worker Host |
-| **Installation** | **Single Wheel** (`pipx install relay-jobs`) | Multi-service stack | Multi-service stack | Distributed cluster |
+| **Installation** | **Single Wheel** (`pipx install walflow`) | Multi-service stack | Multi-service stack | Distributed cluster |
 
 ---
 
@@ -134,7 +134,7 @@ stateDiagram-v2
 
 ```powershell
 cd relay
-.\.venv\Scripts\relay.exe init
+.\.venv\Scripts\walflow.exe init
 ```
 
 > [!NOTE]
@@ -143,7 +143,7 @@ cd relay
 ### 2. Start the Loopback API Server & Dashboard
 
 ```powershell
-.\.venv\Scripts\relay.exe serve --port 8000
+.\.venv\Scripts\walflow.exe serve --port 8000
 ```
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser. Enter the token printed by `init` to access the live operations dashboard.
@@ -151,15 +151,15 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser. Enter the t
 ### 3. Start a Worker Supervisor
 
 ```powershell
-.\.venv\Scripts\relay.exe worker start --concurrency 4
+.\.venv\Scripts\walflow.exe worker start --concurrency 4
 ```
 
 ### 4. Define and Enqueue Tasks with the Python SDK
 
 ```python
-from relay import Relay, progress, task
+from walflow import Walflow, progress, task
 
-app = Relay()
+app = Walflow()
 
 @task(queue="media", priority=10, timeout_ms=60000, max_attempts=3)
 def extract_frames(video_url: str) -> dict[str, int]:
@@ -186,41 +186,41 @@ notify_pipeline_complete.delay(user_id="user_123", depends_on=[job_id])
 #### Jobs & Health
 ```powershell
 # Enqueue a job via CLI
-.\.venv\Scripts\relay.exe jobs submit text_summary --payload '{"text": "Relay v2 background jobs"}'
+.\.venv\Scripts\walflow.exe jobs submit text_summary --payload '{"text": "Walflow background jobs"}'
 
 # List active jobs and inspect health
-.\.venv\Scripts\relay.exe jobs list --state running
-.\.venv\Scripts\relay.exe doctor
+.\.venv\Scripts\walflow.exe jobs list --state running
+.\.venv\Scripts\walflow.exe doctor
 ```
 
 #### Cron Schedules
 ```powershell
 # Register a recurring schedule (every hour at minute 0)
-.\.venv\Scripts\relay.exe cron add cleanup_temp "0 * * * *" cleanup_task
+.\.venv\Scripts\walflow.exe cron add cleanup_temp "0 * * * *" cleanup_task
 
 # List and manage schedules
-.\.venv\Scripts\relay.exe cron list
-.\.venv\Scripts\relay.exe cron pause cleanup_temp
-.\.venv\Scripts\relay.exe cron resume cleanup_temp
+.\.venv\Scripts\walflow.exe cron list
+.\.venv\Scripts\walflow.exe cron pause cleanup_temp
+.\.venv\Scripts\walflow.exe cron resume cleanup_temp
 ```
 
 #### Dead-Letter Queue (DLQ)
 ```powershell
 # View failed jobs in DLQ
-.\.venv\Scripts\relay.exe dlq list
+.\.venv\Scripts\walflow.exe dlq list
 
 # Redrive a specific job with patched payload
-.\.venv\Scripts\relay.exe dlq redrive <job-id> --payload '{"text": "fixed input"}'
+.\.venv\Scripts\walflow.exe dlq redrive <job-id> --payload '{"text": "fixed input"}'
 
 # Bulk redrive all failed jobs for a handler
-.\.venv\Scripts\relay.exe dlq redrive-all --handler text_summary
+.\.venv\Scripts\walflow.exe dlq redrive-all --handler text_summary
 ```
 
 ---
 
 ## Test Matrix & Verification
 
-Relay is tested with an exhaustive matrix covering concurrency, crash rollbacks, and release isolation:
+Walflow is tested with an exhaustive matrix covering concurrency, crash rollbacks, and release isolation:
 
 ```powershell
 cd relay
@@ -252,12 +252,12 @@ resumeproject/
 │   ├── devlog/               # Measured benchmarks and release verification logs
 │   └── relay/                # Architecture, threat model, runbook, and ADRs
 └── relay/                    # Application package
-    ├── pyproject.toml        # Python manifest (hatchling backend, v0.2.0)
+    ├── pyproject.toml        # Python manifest (hatchling backend, walflow v0.2.0)
     ├── uv.lock               # Deterministic dependency lockfile
     ├── Dockerfile            # Multi-stage production container
     ├── compose.yaml          # Service isolation specification
-    ├── src/relay/            # Domain, storage, worker supervisor, SDK, API, and CLI
-    │   ├── sdk.py            # @relay.task decorator and Task abstraction
+    ├── src/walflow/          # Domain, storage, worker supervisor, SDK, API, and CLI
+    │   ├── sdk.py            # @task decorator and Task abstraction
     │   ├── services/
     │   │   ├── cron.py       # Drift-free SQLite recurring schedule engine
     │   │   ├── dlq.py        # Dead-letter queue redrive service
@@ -276,4 +276,4 @@ resumeproject/
 
 ## License
 
-Relay is licensed under the [Apache License, Version 2.0](relay/LICENSE).
+Walflow is licensed under the [Apache License, Version 2.0](relay/LICENSE).

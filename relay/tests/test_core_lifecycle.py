@@ -2,12 +2,12 @@
 
 import pytest
 
-from relay.domain.errors import StaleOwnerError
-from relay.services.claim import claim_job
-from relay.services.complete import complete_job, fail_job, heartbeat
-from relay.services.recovery import recover_expired_jobs
-from relay.services.setup import pause_queue, resume_queue
-from relay.services.submit import submit_job
+from walflow.domain.errors import StaleOwnerError
+from walflow.services.claim import claim_job
+from walflow.services.complete import complete_job, fail_job, heartbeat
+from walflow.services.recovery import recover_expired_jobs
+from walflow.services.setup import pause_queue, resume_queue
+from walflow.services.submit import submit_job
 
 
 def submit(db, clock, **kwargs):
@@ -108,7 +108,7 @@ def test_permanent_failure_does_not_retry(db, clock, rng, default_queue):
 
 @pytest.mark.parametrize("payload", [[], None, "text", 1])
 def test_non_object_payload_is_typed_validation_error(db, clock, default_queue, payload):
-    from relay.domain.errors import ValidationError
+    from walflow.domain.errors import ValidationError
 
     with pytest.raises(ValidationError):
         submit_job(db, clock=clock, handler="text_summary", payload=payload)

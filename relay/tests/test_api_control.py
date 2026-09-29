@@ -11,12 +11,12 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from relay.api import create_app
-from relay.api.operations import rerun_job
-from relay.domain.clock import SystemClock
-from relay.services.claim import claim_job
-from relay.services.complete import complete_job
-from relay.storage.transactions import connect
+from walflow.api import create_app
+from walflow.api.operations import rerun_job
+from walflow.domain.clock import SystemClock
+from walflow.services.claim import claim_job
+from walflow.services.complete import complete_job
+from walflow.storage.transactions import connect
 
 TOKEN = "test-only-installation-token"
 AUTH = {"Authorization": f"Bearer {TOKEN}"}
